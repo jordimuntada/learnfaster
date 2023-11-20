@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="/css/bootstrap.min.css">
+  <title>Processed Text</title>
+</head>
+<body>
+  <div class="container mt-5">
+    <div class="container mt-5">
+      <h1 class="display-4">Chat Completion Result</h1>
+      <p>Generated Text:</p>
+      <pre><%= generatedText %></pre>
+      <!-- Add any additional content or styling as needed -->
+    </div>
+    <h1 class="display-4">Processed Language Learning Notes</h1>
+    <div class="alert alert-success" role="alert">
+      <%= generatedText %>
+    </div>
+    <h2 class="mt-5">Translation:</h2>
+    <div class="alert alert-info" role="alert">
+      <%= translations  %>
+    </div>
+    <h2 class="mt-5">Word Explanations:</h2>
+    <ul class="list-group">
+      <% wordExplanations.forEach(function(explanation) { %>
+        <li class="list-group-item"><%= wordExplanations %></li>
+      <% }); %>
+    </ul>
+    <h2 class="mt-5">Word Translations:</h2>
+    <ul class="list-group">
+      <% for (const word in wordTranslations) { %>
+        <li class="list-group-item">
+          <%= word %>: English - <%= wordTranslations[word].english %>, Spanish - <%= wordTranslations[word].spanish %>
+          <button class="btn btn-primary" data-audio="<%= audioFiles[word] %>">Pronunciation</button>
+        </li>
+      <% } %>
+    </ul>
+  </div>
+
+  <script>
+    const pronunciationButtons = document.querySelectorAll('.btn-primary');
+    pronunciationButtons.forEach((button) => {
+      button.addEventListener('click', () => {
+        const audioFile = button.getAttribute('data-audio');
+        const audio = new Audio(audioFile);
+        audio.play();
+      });
+    });
+  </script>
+</body>
+</html>
+
+<!-- Your existing content -->
+<!-- Add this at the bottom of your template -->
+<button onclick="openPopup()">Subscribe to Newsletter</button>
