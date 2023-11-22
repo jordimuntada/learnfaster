@@ -8,7 +8,9 @@ const { OpenAI } = require('openai');
 const langdetect = require('langdetect');
 const translate = require('google-translate-api');
 const natural = require('natural');
-const tokenizer = new natural.WordTokenizer();
+//const tokenizer = new natural.WordTokenizer();
+const tokenizer = new natural.RegexpTokenizer({ pattern: /\s+/ });
+
 const axios = require('axios');
 const textToSpeech = require('node-gtts')('en');
 // My own code
@@ -155,25 +157,30 @@ app.post('/upload', upload.single('textfile'), async (req, res) => {
       //const generatedText = chatCompletion.choices[0].text;
       const generatedText = chatCompletion.choices[0].message;
       console.log("Generated Words = ", generatedText);
+
+      //res.redirect('/result');
+      // Extract generated text from the GPT-3 response
+      //const generatedText = chatCompletion.choices[0].message;
+      //console.log("Generated Words = ", generatedText);
+
+      // Fetch word explanations
+      //generatedText = generatedText.map(String).join(" ");
+      const tokens = tokenizer.tokenize(generatedText.content);
+      console.log("----> TOKENS = ", tokens);
+      const wordExplanations = await fetchWordExplanations(tokens);
+      console.log("-> wordExplanations = ", wordExplanations);
+      // Translate words to English and Spanish
+      const wordTranslations = await translateWordsToEnglishAndSpanish(tokens);
+      console.log("-> wordTranslations = ", wordTranslations);
+
+      // Render the 'result' page with generated text, word explanations, and translations
+      res.render('result', { generatedText, wordExplanations, wordTranslations });
       
   } else {
     console.error('File does not exist:', filePath);
     res.status(404).send('The uploaded file does not exist.');
   }
-  //res.redirect('/result');
-  // Extract generated text from the GPT-3 response
-  const generatedText = chatCompletion.choices[0].message;
-  console.log("Generated Words = ", generatedText);
-
-  // Fetch word explanations
-  const tokens = tokenizer.tokenize(generatedText);
-  const wordExplanations = await fetchWordExplanations(tokens);
-
-  // Translate words to English and Spanish
-  const wordTranslations = await translateWordsToEnglishAndSpanish(tokens);
-
-  // Render the 'result' page with generated text, word explanations, and translations
-  res.render('result', { generatedText, wordExplanations, wordTranslations });
+  
 });
 
 app.post('/makeText', upload.single('textfile'), async (req, res) => {
@@ -256,7 +263,7 @@ app.post('/makeText', upload.single('textfile'), async (req, res) => {
       console.error('File does not exist:', filePath);
       res.status(404).send('The uploaded file does not exist.');
     }
-    res.redirect('/result');
+    res.redirect('/makeTextResult.ejs');
   });
 
 
@@ -265,6 +272,63 @@ app.post('/makeText', upload.single('textfile'), async (req, res) => {
 // Function to fetch word explanations using WordsAPI
 async function fetchWordExplanations(tokens, language) {
   const explanations = [];
+  const openai_explanations = [];
+
+  ///// OPENAI
+  for (const token of tokens)  {
+    console.log("---> token", token);
+    const chatCompletion  = await openai_client.chat.completions.create(
+    ////// NEW //////
+    // New
+    /*
+    const stream = await openai.chat.completions.create({
+        model: "gpt-3.5-turbo",
+        messages: [{"role": "user", "content": "Hello!"}],
+        stream: true,
+    });
+    for await (const part of stream) {
+        console.log(part.choices[0].delta);
+    } */
+    /////////////////
+      {
+        model: 'gpt-3.5-turbo',
+        //prompt: prompt,
+        messages: [
+          { role: 'system', content: 'You are a helpful teacher assistant expert in Russian Language and English Language.' },
+          { role: 'user', content: `Generate an easy definition in English of the following word: ${token}` },
+          { role: 'assistant', content: '' }, // Leave content empty to let the model generate the assistant's response
+        ],
+        max_tokens: 100,
+      },
+      
+      (error, response) => {
+        
+        if (error) {
+          console.error('OpenAI Error:', error);
+          reject(error);
+        } else {
+          console.log("************ ");
+
+          console.log("RESPONSE = ", response);
+          console.log("************ ");
+
+          if (response.choices[0].message && response.choices[0].message.length > 0) {
+            const definition = response.choices[0].message.definition;
+            explanations.push(`${token} - ${definition}`);
+          }
+          console.log("INSIDE resolve(response)");
+          console.log("RESPONSE = ", response);
+          resolve(response);
+        }
+      }
+    );
+  }
+  return openai_explanations;
+  /////
+
+
+
+
   for (const token of tokens) {
     // Adjust this logic to fetch word explanations as per your requirements
     // Here, we assume WordsAPI is used to get word definitions
